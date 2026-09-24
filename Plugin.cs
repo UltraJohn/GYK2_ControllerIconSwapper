@@ -18,11 +18,13 @@ namespace ControllerIconSwapper
 			JoyCon
 		}
 
+		public static Plugin Instance { get; private set; }
 		public static ConfigEntry<TargetIconType> PreferredIcons;
 
 		private void Awake()
 		{
 			// Plugin startup logic
+			Instance = this;
 			Logger = base.Logger;
 			Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
 

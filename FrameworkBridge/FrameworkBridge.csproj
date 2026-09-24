@@ -1,0 +1,81 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>ControllerIconSwapper.Framework</AssemblyName>
+    <Product>Controller Icon Swapper - GK2 Framework Integration</Product>
+    <Version>1.1.0</Version>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>latest</LangVersion>
+    <RestoreAdditionalProjectSources>
+      https://api.nuget.org/v3/index.json;
+      https://nuget.bepinex.dev/v3/index.json;
+      https://nuget.samboy.dev/v3/index.json
+    </RestoreAdditionalProjectSources>
+    <RootNamespace>ControllerIconSwapper.Framework</RootNamespace>
+    <GameDir Condition="'$(GameDir)' == ''">..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Graveyard Keeper 2</GameDir>
+    <BepInExDir Condition="'$(BepInExDir)' == ''">$(GameDir)\BepInEx</BepInExDir>
+    <FrameworkDll Condition="'$(FrameworkDll)' == ''">$(BepInExDir)\plugins\GK2.Framework.dll</FrameworkDll>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
+    <PackageReference Include="BepInEx.Core" Version="5.*" />
+    <PackageReference Include="UnityEngine.Modules" Version="5.6.0" IncludeAssets="compile" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" PrivateAssets="all" />
+  </ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\ControllerIconSwapper.csproj">
+			<Private>false</Private>
+		</ProjectReference>
+		<Reference Include="GK2.Framework">
+		  <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Graveyard Keeper 2\BepInEx\plugins\GK2.Framework.dll</HintPath>
+		  <Private>False</Private>
+		</Reference>
+		<Reference Include="UnityEngine.CoreModule">
+		  <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Graveyard Keeper 2\GraveyardKeeper2_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+		  <Private>False</Private>
+		</Reference>
+	</ItemGroup>
+	<ItemGroup>
+		<Reference Update="mscorlib">
+			<Private>False</Private>
+		</Reference>
+	</ItemGroup>
+
+	<Target Name="ZipPlugin" AfterTargets="PostBuildEvent">
+		<!-- Define output directory and zip path. Uses the main mod's plugin name/version so
+		     this overwrites the standalone zip produced by ControllerIconSwapper.csproj (which
+		     already ran, since this project references it) with one containing both DLLs. -->
+		<PropertyGroup>
+			<PluginName>ControllerIconSwapper</PluginName>
+			<ZipOutputDir>$(SolutionDir)Builds</ZipOutputDir>
+			<ZipFilePath>$(ZipOutputDir)\$(PluginName)_v$(Version).zip</ZipFilePath>
+			<StagingDir>$(IntermediateOutputPath)ZipStaging\BepInEx\plugins\$(PluginName)</StagingDir>
+			<MainTargetDir>$(MSBuildThisFileDirectory)..\bin\$(Configuration)\$(TargetFramework)\</MainTargetDir>
+		</PropertyGroup>
+
+		<!-- Create clean staging folder and output folder -->
+		<MakeDir Directories="$(ZipOutputDir)" />
+		<RemoveDir Directories="$(IntermediateOutputPath)ZipStaging" />
+		<MakeDir Directories="$(StagingDir)" />
+
+		<!-- Copy both the main mod DLL and this bridge DLL into the same staging directory -->
+		<ItemGroup>
+			<PluginDlls Include="$(MainTargetDir)ControllerIconSwapper.dll" />
+			<PluginDlls Include="$(TargetPath)" />
+		</ItemGroup>
+		<Copy SourceFiles="@(PluginDlls)" DestinationFolder="$(StagingDir)" />
+
+		<!-- Delete old zip if it exists, then create the new combined zip -->
+		<Delete Files="$(ZipFilePath)" Condition="Exists('$(ZipFilePath)')" />
+		<ZipDirectory SourceDirectory="$(IntermediateOutputPath)ZipStaging" DestinationFile="$(ZipFilePath)" />
+
+		<!-- Log message in build console -->
+		<Message Text="[Post-Build] Created combined release zip at: $(ZipFilePath)" Importance="high" />
+	</Target>
+</Project>
